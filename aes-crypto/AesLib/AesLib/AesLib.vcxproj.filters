@@ -21,9 +21,15 @@
     <ClCompile Include="print_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="aes_statics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="print_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aes_statics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

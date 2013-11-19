@@ -13,9 +13,11 @@
   <ItemGroup>
     <ClCompile Include="aes_crypto.cpp" />
     <ClCompile Include="print_utils.cpp" />
+    <ClCompile Include="aes_statics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="print_utils.h" />
+    <ClInclude Include="aes_statics.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3222F97F-8C14-4282-835C-78CFFDE70F03}</ProjectGuid>
