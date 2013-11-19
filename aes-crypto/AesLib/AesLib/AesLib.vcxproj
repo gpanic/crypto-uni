@@ -11,11 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="aes.cpp" />
     <ClCompile Include="aes_crypto.cpp" />
     <ClCompile Include="print_utils.cpp" />
     <ClCompile Include="aes_statics.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="aes.h" />
     <ClInclude Include="print_utils.h" />
     <ClInclude Include="aes_statics.h" />
   </ItemGroup>
