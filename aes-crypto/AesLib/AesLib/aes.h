@@ -5,47 +5,39 @@ class Aes
 public:
 	void Encrypt();
 protected:
-	unsigned char key_size;
-	unsigned char key_schedule_size;
+	unsigned char key[32];
+	int key_size;
+	unsigned char key_schedule[240];
+	int key_schedule_size;
+	unsigned char state[4][4];
+	const int nb;
+	int nr;
+	int nk;
 
-	virtual void ExpandKey() = 0;
-	void Rotate(unsigned char *arr, unsigned int size);
+	Aes(unsigned char *key, int key_size);
+	void ExpandKey();
+	void RotWord(unsigned char *in);
 	void ScheduleCore(unsigned char *in, unsigned char i);
-	void ExpandKeyGeneric(unsigned char *key, unsigned char *keys, const int key_size, const int key_schedule_size);
-	void FillT(unsigned char* t, unsigned char *key_schedule, int cnt);
-	void SetNext4(unsigned char* t, unsigned char *key_schedule, int *cnt, int key_size);
-	void FillTAndSetNext4(int loop, unsigned char* t, unsigned char *key_schedule, int *cnt, int key_size);
+	void SubWord(unsigned char *in);
+	void FillT(unsigned char* t, int cnt);
+	void SetNext4(unsigned char* t, int *cnt);
+	void FillTAndSetNext4(int loop, unsigned char* t, int *cnt);
 };
 
 class Aes128 : public Aes
 {
 public:
-	Aes128(unsigned char key[16]);
-private:
-	unsigned char key[16];
-	unsigned char key_schedule[176];
-
-	void ExpandKey();
+	Aes128(unsigned char *key);
 };
 
 class Aes192 : public Aes
 {
 public:
-	Aes192(unsigned char key[24]);
-private:
-	unsigned char key[24];
-	unsigned char key_schedule[208];
-
-	void ExpandKey();
+	Aes192(unsigned char *key);
 };
 
 class Aes256 : public Aes
 {
 public:
-	Aes256(unsigned char key[32]);
-private:
-	unsigned char key[32];
-	unsigned char key_schedule[240];
-
-	void ExpandKey();
+	Aes256(unsigned char *key);
 };

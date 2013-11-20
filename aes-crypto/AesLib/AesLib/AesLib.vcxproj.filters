@@ -27,6 +27,9 @@
     <ClCompile Include="aes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="base64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="print_utils.h">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="base64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

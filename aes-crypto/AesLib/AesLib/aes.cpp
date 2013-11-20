@@ -1,34 +1,60 @@
 #include <algorithm>
 #include <iostream>
 
+#include "aes.h"
 #include "aes_statics.h"
 #include "print_utils.h"
 
-#include "aes.h"
-
 using namespace std;
 
-void Aes::Rotate(unsigned char *arr, unsigned int size)
+Aes::Aes(unsigned char *key, int key_size) : nb(4)
 {
-	unsigned char first = arr[0];
-	for (unsigned char i = 0; i < size - 1; ++i)
+	this->key_size = key_size;
+	this->nk = key_size / 4;
+	this->nr = nk + 6;
+	this->key_schedule_size = (nr + 1) * 16;
+
+	fill(begin(this->key), end(this->key), 0x00);
+	fill(begin(this->key_schedule), end(this->key_schedule), 0x00);
+
+	for (int i = 0; i < key_size; ++i)
 	{
-		arr[i] = arr[i + 1];
+		this->key[i] = key[i];
 	}
-	arr[size - 1] = first;
+}
+
+void Aes::Encrypt()
+{
+	ExpandKey();
+	PrintHexCol(key_schedule, key_schedule_size, 16);
+}
+
+void Aes::RotWord(unsigned char *in)
+{
+	unsigned char first = in[0];
+	for (unsigned char i = 0; i < 3; ++i)
+	{
+		in[i] = in[i + 1];
+	}
+	in[3] = first;
 }
 
 void Aes::ScheduleCore(unsigned char *in, unsigned char i)
 {
-	Rotate(in, 4);
+	RotWord(in);
+	SubWord(in);
+	in[0] ^= AesStatics::rcon[i];
+}
+
+void Aes::SubWord(unsigned char *in)
+{
 	for (unsigned char j = 0; j < 4; ++j)
 	{
 		in[j] = AesStatics::sbox[in[j]];
 	}
-	in[0] ^= AesStatics::rcon[i];
 }
 
-void Aes::FillT(unsigned char* t, unsigned char *key_schedule, int cnt)
+void Aes::FillT(unsigned char* t, int cnt)
 {
 	for (int j = 0; j < 4; ++j)
 	{
@@ -36,7 +62,7 @@ void Aes::FillT(unsigned char* t, unsigned char *key_schedule, int cnt)
 	}
 }
 
-void Aes::SetNext4(unsigned char* t, unsigned char *key_schedule, int *cnt, int key_size)
+void Aes::SetNext4(unsigned char* t, int *cnt)
 {
 	for (int j = 0; j < 4; ++j)
 	{
@@ -45,19 +71,19 @@ void Aes::SetNext4(unsigned char* t, unsigned char *key_schedule, int *cnt, int 
 	(*cnt) += 4;
 }
 
-void Aes::FillTAndSetNext4(int loop, unsigned char* t, unsigned char *key_schedule, int *cnt, int key_size)
+void Aes::FillTAndSetNext4(int loop, unsigned char* t, int *cnt)
 {
 	for (int j = 0; j < loop; j++)
 	{
-		FillT(t, key_schedule, *cnt);
-		SetNext4(t, key_schedule, cnt, key_size);
+		FillT(t, *cnt);
+		SetNext4(t, cnt);
 	}
 }
 
-void Aes::ExpandKeyGeneric(unsigned char *key, unsigned char *key_schedule, const int key_size, const int key_schedule_size)
+void Aes::ExpandKey()
 {
 
-	for (int j = 0; j < 16; ++j)
+	for (int j = 0; j < key_size; ++j)
 	{
 		key_schedule[j] = key[j];
 	}
@@ -67,85 +93,31 @@ void Aes::ExpandKeyGeneric(unsigned char *key, unsigned char *key_schedule, cons
 	unsigned char t[4];
 	while (cnt < key_schedule_size)
 	{
-		FillT(t, key_schedule, cnt);
+		FillT(t, cnt);
 		ScheduleCore(t, i);
 		++i;
-		
-		SetNext4(t, key_schedule, &cnt, key_size);
-		FillTAndSetNext4(3, t, key_schedule, &cnt, key_size);
+
+		SetNext4(t, &cnt);
+		FillTAndSetNext4(3, t, &cnt);
 
 		if (key_size == 32 && cnt < key_schedule_size)
 		{
-			FillT(t, key_schedule, cnt);
-			for (int j = 0; j < 4; ++j)
-			{
-				t[j] = AesStatics::sbox[t[j]];
-			}
-			SetNext4(t, key_schedule, &cnt, key_size);
+			FillT(t, cnt);
+			SubWord(t);
+			SetNext4(t, &cnt);
 		}
 
 		if (key_size == 24 && cnt < key_schedule_size)
 		{
-			FillTAndSetNext4(2, t, key_schedule, &cnt, key_size);
+			FillTAndSetNext4(2, t, &cnt);
 		}
 		else if (key_size == 32 && cnt < key_schedule_size)
 		{
-			FillTAndSetNext4(3, t, key_schedule, &cnt, key_size);
+			FillTAndSetNext4(3, t, &cnt);
 		}
 	}
-	PrintHexCol(key_schedule, 240, 16);
 }
 
-void Aes::Encrypt()
-{
-	ExpandKey();
-}
-
-Aes128::Aes128(unsigned char key[16])
-{
-	for (int i = 0; i < 16; ++i)
-	{
-		this->key[i] = key[i];
-	}
-	this->key_size = 16;
-	this->key_schedule_size = 176;
-	fill(begin(this->key_schedule), end(this->key_schedule), 0x00);
-}
-
-void Aes128::ExpandKey()
-{
-	ExpandKeyGeneric(key, key_schedule, key_size, key_schedule_size);
-}
-
-
-Aes192::Aes192(unsigned char key[24])
-{
-	for (int i = 0; i < 24; ++i)
-	{
-		this->key[i] = key[i];
-	}
-	this->key_size = 24;
-	this->key_schedule_size = 208;
-	fill(begin(this->key_schedule), end(this->key_schedule), 0x00);
-}
-
-void Aes192::ExpandKey()
-{
-	ExpandKeyGeneric(key, key_schedule, key_size, key_schedule_size);
-}
-
-Aes256::Aes256(unsigned char key[32])
-{
-	for (int i = 0; i < 32; ++i)
-	{
-		this->key[i] = key[i];
-	}
-	this->key_size = 32;
-	this->key_schedule_size = 240;
-	fill(begin(this->key_schedule), end(this->key_schedule), 0x00);
-}
-
-void Aes256::ExpandKey()
-{
-	ExpandKeyGeneric(key, key_schedule, key_size, key_schedule_size);
-}
+Aes128::Aes128(unsigned char key[16]) : Aes(key, 16) {}
+Aes192::Aes192(unsigned char key[24]) : Aes(key, 24) {}
+Aes256::Aes256(unsigned char key[32]) : Aes(key, 32) {}
