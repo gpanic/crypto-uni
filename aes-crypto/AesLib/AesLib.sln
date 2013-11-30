@@ -5,6 +5,11 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AesLib", "AesLib\AesLib.vcxproj", "{3222F97F-8C14-4282-835C-78CFFDE70F03}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Metrics", "Metrics\Metrics.vcxproj", "{0F297D44-4751-4905-BEE2-83008711B91D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3222F97F-8C14-4282-835C-78CFFDE70F03} = {3222F97F-8C14-4282-835C-78CFFDE70F03}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -15,6 +20,10 @@ Global
 		{3222F97F-8C14-4282-835C-78CFFDE70F03}.Debug|Win32.Build.0 = Debug|Win32
 		{3222F97F-8C14-4282-835C-78CFFDE70F03}.Release|Win32.ActiveCfg = Release|Win32
 		{3222F97F-8C14-4282-835C-78CFFDE70F03}.Release|Win32.Build.0 = Release|Win32
+		{0F297D44-4751-4905-BEE2-83008711B91D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0F297D44-4751-4905-BEE2-83008711B91D}.Debug|Win32.Build.0 = Debug|Win32
+		{0F297D44-4751-4905-BEE2-83008711B91D}.Release|Win32.ActiveCfg = Release|Win32
+		{0F297D44-4751-4905-BEE2-83008711B91D}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

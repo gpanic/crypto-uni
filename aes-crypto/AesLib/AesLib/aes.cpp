@@ -1,12 +1,15 @@
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 
 #include <Windows.h>
 #include <bcrypt.h>
 
-#include "aes.h"
+#include "aes2.h"
 #include "aes_statics.h"
 #include "print_utils.h"
+#include "array_utils.h"
+#include "base64.h"
 
 using namespace std;
 
@@ -70,9 +73,169 @@ void Aes::DecryptBlock(unsigned char * ctxt, unsigned char * out)
 	ExtractState(out);
 }
 
-void Aes::GenerateKey(unsigned int size, unsigned char * out)
+bool Aes::EncryptFileCbc(string fin, string fout)
+{
+	ifstream ifsin(fin, ios::in | ios::binary | ios::ate);
+	ofstream ifsout(fout, ios::out | ios::binary);
+	ifstream::pos_type size;
+	unsigned char *buffer;
+	unsigned char *tmp;
+	if (ifsin.is_open() && ifsout.is_open())
+	{
+		size = ifsin.tellg();
+		buffer = new unsigned char[16];
+		tmp = new unsigned char[16];
+		GenerateIv(tmp);
+		ifsout.write((const char*)tmp, 16);
+
+		ifsin.seekg(0, ios::beg);
+		while (ifsin.tellg() + static_cast<ifstream::pos_type>(16) <= size)
+		{
+			ifsin.read((char*)buffer, 16);
+			XorArray(buffer, tmp, 16);
+			EncryptBlock(buffer, buffer);
+			ifsout.write((const char*)buffer, 16);
+			CopyArray(buffer, tmp, 16);
+		}
+
+		unsigned char left = size - ifsin.tellg();
+		if (left != 0)
+		{
+			ifsin.read((char*)buffer, left);
+			for (int i = left; i < 16; i++)
+			{
+				buffer[i] = 16 - left;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 16; i++)
+			{
+				buffer[i] = 0x10;
+			}
+		}
+
+		XorArray(buffer, tmp, 16);
+		EncryptBlock(buffer, buffer);
+		ifsout.write((const char*)buffer, 16);
+
+		ifsin.close();
+		ifsout.close();
+
+		delete[] buffer;
+		delete[] tmp;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool Aes::DecryptFileCbc(string fin, string fout)
+{
+	ifstream ifsin(fin, ios::in | ios::binary | ios::ate);
+	ofstream ifsout(fout, ios::out | ios::binary);
+	ifstream::pos_type size;
+	unsigned char *buffer;
+	unsigned char *tmp1;
+	unsigned char *tmp2;
+	if (ifsin.is_open() && ifsout.is_open())
+	{
+		size = ifsin.tellg();
+		buffer = new unsigned char[16];
+		tmp1 = new unsigned char[16];
+		tmp2 = new unsigned char[16];
+
+		ifsin.seekg(0, ios::beg);
+		ifsin.read((char*)tmp2, 16);
+
+
+		while (ifsin.tellg() + static_cast<ifstream::pos_type>(16) < size)
+		{
+			ifsin.read((char*)buffer, 16);
+			DecryptBlock(buffer, tmp1);
+			XorArray(tmp1, tmp2, 16);
+			ifsout.write((const char*)tmp1, 16);
+			CopyArray(buffer, tmp2, 16);
+		}
+
+		unsigned char left = size - ifsin.tellg();
+		if (left != 16)
+		{
+			return false;
+		}
+
+		ifsin.read((char*)buffer, 16);
+		DecryptBlock(buffer, tmp1);
+		XorArray(tmp1, tmp2, 16);
+		int padd = tmp1[15];
+		if (padd != 16)
+		{
+			ifsout.write((const char*)tmp1, 16 - padd);
+		}
+		ifsin.close();
+		ifsout.close();
+
+		delete[] buffer;
+		delete[] tmp1;
+		delete[] tmp2;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void Aes::GenerateKey(unsigned int size, unsigned char *out)
 {
 	BCryptGenRandom(0, out, size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+}
+
+bool Aes::CreateKey(string out, int size)
+{
+	if (size == 128 || size == 192 || size == 256)
+	{
+		unsigned char key[32];
+		Aes::GenerateKey(size / 8, key);
+		ofstream ifsout(out, ios::out | ios::binary);
+		if (ifsout.is_open())
+		{
+			ifsout << "AES Key:\n";
+			ifsout << base64_encode(key, size / 8);
+		}
+		ifsout.close();
+	}
+	return false;
+}
+
+void Aes::LoadKey(string in, int size, unsigned char *out)
+{
+	if (size == 128 || size == 192 || size == 256)
+	{
+		ifstream ifsin(in, ios::in);
+		if (ifsin.is_open())
+		{
+			string key;
+			getline(ifsin, key);
+			getline(ifsin, key);
+			key = base64_decode(key);
+			if (key.size() >= size / 8)
+			{
+				for (int i = 0; i < size / 8; ++i)
+				{
+					out[i] = (unsigned char)key[i];
+				}
+			}
+		}
+		ifsin.close();
+	}
+}
+
+void Aes::GenerateIv( unsigned char * out)
+{
+	BCryptGenRandom(0, out, 16, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
 }
 
 void Aes::ExpandKey()
@@ -278,18 +441,60 @@ void Aes::InvShiftRows()
 
 void Aes::MixColumns()
 {
+	/*
 	MixColumnsGeneric(AesStatics::mix_mat);
+	*/
+	unsigned char sum;
+	unsigned char state_clm[4] = { 0x00 };
+
+	for (int i = 0; i < 4; ++i)
+	{
+		// i == 0
+		sum = 0x00;
+		sum ^= Gmul(4 * 0 + 0, &state[0][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 0 + 1, &state[1][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 0 + 2, &state[2][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 0 + 3, &state[3][i], AesStatics::mix_mat);
+		state_clm[0] = sum;
+
+		sum = 0x00;
+		sum ^= Gmul(4 * 1 + 0, &state[0][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 1 + 1, &state[1][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 1 + 2, &state[2][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 1 + 3, &state[3][i], AesStatics::mix_mat);
+		state_clm[1] = sum;
+
+		sum = 0x00;
+		sum ^= Gmul(4 * 2 + 0, &state[0][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 2 + 1, &state[1][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 2 + 2, &state[2][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 2 + 3, &state[3][i], AesStatics::mix_mat);
+		state_clm[2] = sum;
+
+		sum = 0x00;
+		sum ^= Gmul(4 * 3 + 0, &state[0][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 3 + 1, &state[1][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 3 + 2, &state[2][i], AesStatics::mix_mat);
+		sum ^= Gmul(4 * 3 + 3, &state[3][i], AesStatics::mix_mat);
+		state_clm[3] = sum;
+
+		state[0][i] = state_clm[0];
+		state[1][i] = state_clm[1];
+		state[2][i] = state_clm[2];
+		state[3][i] = state_clm[3];
+	}
 }
 
 void Aes::InvMixColumns()
-{
+{	
 	MixColumnsGeneric(AesStatics::mix_mat_inv);
 }
 
-void Aes::MixColumnsGeneric(const int * mat)
+void Aes::MixColumnsGenericOld(const int * mat)
 {
 	unsigned char sum;
 	unsigned char state_clm[4] = { 0x00 };
+
 	for (int i = 0; i < 4; ++i)
 	{
 		for (int j = 0; j < 4; ++j)
@@ -309,35 +514,85 @@ void Aes::MixColumnsGeneric(const int * mat)
 	}
 }
 
+void Aes::MixColumnsGeneric(const int * mat)
+{
+	unsigned char sum;
+	unsigned char state_clm[4] = { 0x00 };
+
+	for (int i = 0; i < 4; ++i)
+	{
+		// i == 0
+		sum = 0x00;
+		sum ^= Gmul(4 * 0 + 0, &state[0][i], mat);
+		sum ^= Gmul(4 * 0 + 1, &state[1][i], mat);
+		sum ^= Gmul(4 * 0 + 2, &state[2][i], mat);
+		sum ^= Gmul(4 * 0 + 3, &state[3][i], mat);
+		state_clm[0] = sum;
+
+		sum = 0x00;
+		sum ^= Gmul(4 * 1 + 0, &state[0][i], mat);
+		sum ^= Gmul(4 * 1 + 1, &state[1][i], mat);
+		sum ^= Gmul(4 * 1 + 2, &state[2][i], mat);
+		sum ^= Gmul(4 * 1 + 3, &state[3][i], mat);
+		state_clm[1] = sum;
+
+		sum = 0x00;
+		sum ^= Gmul(4 * 2 + 0, &state[0][i], mat);
+		sum ^= Gmul(4 * 2 + 1, &state[1][i], mat);
+		sum ^= Gmul(4 * 2 + 2, &state[2][i], mat);
+		sum ^= Gmul(4 * 2 + 3, &state[3][i], mat);
+		state_clm[2] = sum;
+
+		sum = 0x00;
+		sum ^= Gmul(4 * 3 + 0, &state[0][i], mat);
+		sum ^= Gmul(4 * 3 + 1, &state[1][i], mat);
+		sum ^= Gmul(4 * 3 + 2, &state[2][i], mat);
+		sum ^= Gmul(4 * 3 + 3, &state[3][i], mat);
+		state_clm[3] = sum;
+		
+		state[0][i] = state_clm[0];
+		state[1][i] = state_clm[1];
+		state[2][i] = state_clm[2];
+		state[3][i] = state_clm[3];
+	}
+
+}
+
 unsigned char Aes::Gmul(int index, unsigned char *multiplicant, const int * mat)
 {
-	switch (mat[index])
+	if (mat[index] == 1)
 	{
-	case 1:
 		return *multiplicant;
-		break;
-	case 2:
-		return AesStatics::gmul2[*multiplicant];
-		break;
-	case 3:
-		return AesStatics::gmul3[*multiplicant];
-		break;
-	case 9:
-		return AesStatics::gmul9[*multiplicant];
-		break;
-	case 11:
-		return AesStatics::gmul11[*multiplicant];
-		break;
-	case 13:
-		return AesStatics::gmul13[*multiplicant];
-		break;
-	case 14:
-		return AesStatics::gmul14[*multiplicant];
-		break;
-	default:
-		return 0x00;
-		break;
 	}
+	else if (mat[index] == 2)
+	{
+		return AesStatics::gmul2[*multiplicant];
+	}
+	else if (mat[index] == 2)
+	{
+		return AesStatics::gmul2[*multiplicant];
+	}
+	else if (mat[index] == 3)
+	{
+		return AesStatics::gmul3[*multiplicant];
+	}
+	else if (mat[index] == 9)
+	{
+		return AesStatics::gmul9[*multiplicant];
+	}
+	else if (mat[index] == 11)
+	{
+		return AesStatics::gmul11[*multiplicant];
+	}
+	else if (mat[index] == 13)
+	{
+		return AesStatics::gmul13[*multiplicant];
+	}
+	else if (mat[index] == 14)
+	{
+		return AesStatics::gmul14[*multiplicant];
+	}
+	return 0x00;
 }
 
 Aes128::Aes128(unsigned char key[16]) : Aes(key, 16) {}

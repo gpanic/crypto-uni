@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+
+using namespace std;
 
 class Aes
 {
@@ -6,6 +9,11 @@ public:
 	void EncryptBlock(unsigned char * ptxt, unsigned char * out);
 	void DecryptBlock(unsigned char * ctxt, unsigned char * out);
 	static void GenerateKey(unsigned int size, unsigned char *out);
+	static bool CreateKey(string out, int size);
+	static void LoadKey(string in, int size, unsigned char *out);
+	static void GenerateIv(unsigned char * out);
+	bool EncryptFileCbc(string fin, string fout);
+	bool DecryptFileCbc(string fin, string fout);
 protected:
 	unsigned char key[32];
 	int key_size;
@@ -38,6 +46,7 @@ protected:
 	void MixColumns();
 	void InvMixColumns();
 	void MixColumnsGeneric(const int * mat);
+	void MixColumnsGenericOld(const int * mat);
 	unsigned char Gmul(int index, unsigned char *multiplicant, const int * mat);
 };
 

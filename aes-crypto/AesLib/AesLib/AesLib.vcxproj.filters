@@ -30,6 +30,9 @@
     <ClCompile Include="base64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="array_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="print_utils.h">
@@ -38,10 +41,13 @@
     <ClInclude Include="aes_statics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="aes.h">
+    <ClInclude Include="base64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="base64.h">
+    <ClInclude Include="array_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aes2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
