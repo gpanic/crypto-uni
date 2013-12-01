@@ -63,4 +63,5 @@ int main()
 {
 	SanityCheck();
 	Measure();
+	cin.get();
 }

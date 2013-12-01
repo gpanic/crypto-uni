@@ -13,7 +13,9 @@ public:
 	static void LoadKey(string in, int size, unsigned char *out);
 	static void GenerateIv(unsigned char * out);
 	bool EncryptFileCbc(string fin, string fout);
+	bool EncryptFileCbc2(string fin, string fout, string key);
 	bool DecryptFileCbc(string fin, string fout);
+	bool DecryptFileCbc2(string fin, string fout, string key);
 protected:
 	unsigned char key[32];
 	int key_size;
@@ -26,6 +28,7 @@ protected:
 	int nk;
 
 	Aes(unsigned char *key, int key_size);
+	Aes(int key_size);
 
 	void ExpandKey();
 	void RotWord(unsigned char *in);
@@ -54,6 +57,7 @@ class Aes128 : public Aes
 {
 public:
 	Aes128(unsigned char *key);
+	Aes128();
 };
 
 class Aes192 : public Aes

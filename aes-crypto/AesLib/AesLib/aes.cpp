@@ -13,6 +13,16 @@
 
 using namespace std;
 
+Aes::Aes(int key_size) :nb(4), block_size(16)
+{
+	this->key_size = key_size;
+	this->nk = key_size / 4;
+	this->nr = nk + 6;
+	this->key_schedule_size = (nr + 1) * block_size;
+	fill(begin(this->key), end(this->key), 0x00);
+	fill(begin(this->key_schedule), end(this->key_schedule), 0x00);
+}
+
 Aes::Aes(unsigned char *key, int key_size) : nb(4), block_size(16)
 {
 	this->key_size = key_size;
@@ -72,6 +82,19 @@ void Aes::DecryptBlock(unsigned char * ctxt, unsigned char * out)
 
 	ExtractState(out);
 }
+
+bool Aes::EncryptFileCbc2(string fin, string fout, string key)
+{
+	LoadKey(key, this->key_size, this->key);
+	return EncryptFileCbc(fin, fout);
+}
+
+bool Aes::DecryptFileCbc2(string fin, string fout, string key)
+{
+	LoadKey(key, this->key_size, this->key);
+	return DecryptFileCbc(fin, fout);
+}
+
 
 bool Aes::EncryptFileCbc(string fin, string fout)
 {
@@ -256,7 +279,15 @@ void Aes::ExpandKey()
 		++i;
 
 		SetNext4(t, &cnt);
-		FillTAndSetNext4(3, t, &cnt);
+
+		//FillTAndSetNext4(3, t, &cnt);
+		FillT(t, cnt);
+		SetNext4(t, &cnt);
+		FillT(t, cnt);
+		SetNext4(t, &cnt);
+		FillT(t, cnt);
+		SetNext4(t, &cnt);
+		//
 
 		if (key_size == 32 && cnt < key_schedule_size)
 		{
@@ -267,11 +298,23 @@ void Aes::ExpandKey()
 
 		if (key_size == 24 && cnt < key_schedule_size)
 		{
-			FillTAndSetNext4(2, t, &cnt);
+			//FillTAndSetNext4(2, t, &cnt);
+			FillT(t, cnt);
+			SetNext4(t, &cnt);
+			FillT(t, cnt);
+			SetNext4(t, &cnt);
+			///
 		}
 		else if (key_size == 32 && cnt < key_schedule_size)
 		{
-			FillTAndSetNext4(3, t, &cnt);
+			//FillTAndSetNext4(3, t, &cnt);
+			FillT(t, cnt);
+			SetNext4(t, &cnt);
+			FillT(t, cnt);
+			SetNext4(t, &cnt);
+			FillT(t, cnt);
+			SetNext4(t, &cnt);
+			///
 		}
 	}
 }
@@ -351,6 +394,7 @@ void Aes::ExtractState(unsigned char * out)
 
 void Aes::AddRoundKey(int round)
 {
+	/*
 	for (int i = 0; i < 4; ++i)
 	{
 		for (int j = 0; j < 4; ++j)
@@ -358,6 +402,31 @@ void Aes::AddRoundKey(int round)
 			state[j][i] ^= key_schedule[i * 4 + j + round * block_size];
 		}
 	}
+	*/
+	
+	//unroll
+	int add = round * block_size;
+
+	state[0][0] ^= key_schedule[0 + add];
+	state[1][0] ^= key_schedule[1 + add];
+	state[2][0] ^= key_schedule[2 + add];
+	state[3][0] ^= key_schedule[3 + add];
+
+	state[0][1] ^= key_schedule[4 + add];
+	state[1][1] ^= key_schedule[5 + add];
+	state[2][1] ^= key_schedule[6 + add];
+	state[3][1] ^= key_schedule[7 + add];
+
+	state[0][2] ^= key_schedule[8 + add];
+	state[1][2] ^= key_schedule[9 + add];
+	state[2][2] ^= key_schedule[10 + add];
+	state[3][2] ^= key_schedule[11 + add];
+
+	state[0][3] ^= key_schedule[12 + add];
+	state[1][3] ^= key_schedule[13 + add];
+	state[2][3] ^= key_schedule[14 + add];
+	state[3][3] ^= key_schedule[15 + add];
+	//
 }
 
 void Aes::SubBytes()
@@ -441,48 +510,7 @@ void Aes::InvShiftRows()
 
 void Aes::MixColumns()
 {
-	/*
 	MixColumnsGeneric(AesStatics::mix_mat);
-	*/
-	unsigned char sum;
-	unsigned char state_clm[4] = { 0x00 };
-
-	for (int i = 0; i < 4; ++i)
-	{
-		// i == 0
-		sum = 0x00;
-		sum ^= Gmul(4 * 0 + 0, &state[0][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 0 + 1, &state[1][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 0 + 2, &state[2][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 0 + 3, &state[3][i], AesStatics::mix_mat);
-		state_clm[0] = sum;
-
-		sum = 0x00;
-		sum ^= Gmul(4 * 1 + 0, &state[0][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 1 + 1, &state[1][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 1 + 2, &state[2][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 1 + 3, &state[3][i], AesStatics::mix_mat);
-		state_clm[1] = sum;
-
-		sum = 0x00;
-		sum ^= Gmul(4 * 2 + 0, &state[0][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 2 + 1, &state[1][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 2 + 2, &state[2][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 2 + 3, &state[3][i], AesStatics::mix_mat);
-		state_clm[2] = sum;
-
-		sum = 0x00;
-		sum ^= Gmul(4 * 3 + 0, &state[0][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 3 + 1, &state[1][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 3 + 2, &state[2][i], AesStatics::mix_mat);
-		sum ^= Gmul(4 * 3 + 3, &state[3][i], AesStatics::mix_mat);
-		state_clm[3] = sum;
-
-		state[0][i] = state_clm[0];
-		state[1][i] = state_clm[1];
-		state[2][i] = state_clm[2];
-		state[3][i] = state_clm[3];
-	}
 }
 
 void Aes::InvMixColumns()
@@ -568,10 +596,6 @@ unsigned char Aes::Gmul(int index, unsigned char *multiplicant, const int * mat)
 	{
 		return AesStatics::gmul2[*multiplicant];
 	}
-	else if (mat[index] == 2)
-	{
-		return AesStatics::gmul2[*multiplicant];
-	}
 	else if (mat[index] == 3)
 	{
 		return AesStatics::gmul3[*multiplicant];
@@ -596,5 +620,6 @@ unsigned char Aes::Gmul(int index, unsigned char *multiplicant, const int * mat)
 }
 
 Aes128::Aes128(unsigned char key[16]) : Aes(key, 16) {}
+Aes128::Aes128() : Aes(16) {}
 Aes192::Aes192(unsigned char key[24]) : Aes(key, 24) {}
 Aes256::Aes256(unsigned char key[32]) : Aes(key, 32) {}

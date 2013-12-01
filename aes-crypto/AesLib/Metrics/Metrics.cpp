@@ -44,6 +44,13 @@ void MeasureAesLib()
 	cout << "10MB: " << elapsed.count() << " " << (1 / elapsed.count()) * 10 << " MB/s" << endl;
 }
 
+void Profiling()
+{
+	unsigned char buffer[16] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+	Aes128 aes = Aes128(buffer);
+	aes.EncryptFileCbc("D:/1kb", "D:/1kb_enc");
+}
+
 void MeasureReference()
 {
 	std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -127,8 +134,9 @@ void CreateFiles()
 
 int main()
 {
-	//CreateFiles();
+	CreateFiles();
 	MeasureAesLib();
 	//MeasureReference();
+	//Profiling();
 	cin.get();
 }
