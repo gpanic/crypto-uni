@@ -19,6 +19,8 @@ void MeasureAesLib()
 
 	unsigned char key[16];
 	Aes::GenerateKey(16, key);
+	unsigned char iv[16];
+	Aes::GenerateIv(iv);
 	Aes128 aes(key);
 
 	cout << endl;
@@ -26,19 +28,19 @@ void MeasureAesLib()
 	cout << "ENCRYPTION" << endl;
 
 	start = chrono::system_clock::now();
-	aes.EncryptFileCbc("D:/1kb", "D:/1kb_enc");
+	aes.EncryptFileCbc("D:/1kb", "D:/1kb_enc", iv);
 	end = chrono::system_clock::now();
 	elapsed = end - start;
 	cout << "1KB: " << elapsed.count() << " " << (1 / elapsed.count()) / 1024 << " MB/s" << endl;
 
 	start = chrono::system_clock::now();
-	aes.EncryptFileCbc("D:/1mb", "D:/1mb_enc");
+	aes.EncryptFileCbc("D:/1mb", "D:/1mb_enc", iv);
 	end = chrono::system_clock::now();
 	elapsed = end - start;
 	cout << "1MB: " << elapsed.count() << " " << 1 / elapsed.count() << " MB/s" << endl;
 
 	start = chrono::system_clock::now();
-	aes.EncryptFileCbc("D:/10mb", "D:/10mb_enc");
+	aes.EncryptFileCbc("D:/10mb", "D:/10mb_enc", iv);
 	end = chrono::system_clock::now();
 	elapsed = end - start;
 	cout << "10MB: " << elapsed.count() << " " << (1 / elapsed.count()) * 10 << " MB/s" << endl;
@@ -48,7 +50,7 @@ void Profiling()
 {
 	unsigned char buffer[16] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
 	Aes128 aes = Aes128(buffer);
-	aes.EncryptFileCbc("D:/1kb", "D:/1kb_enc");
+	aes.EncryptFileCbc("D:/1mb", "D:/1mb_enc", buffer);
 }
 
 void MeasureReference()
@@ -134,7 +136,7 @@ void CreateFiles()
 
 int main()
 {
-	CreateFiles();
+	//CreateFiles();
 	MeasureAesLib();
 	//MeasureReference();
 	//Profiling();

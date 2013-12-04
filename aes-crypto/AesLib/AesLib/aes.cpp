@@ -11,6 +11,9 @@
 #include "array_utils.h"
 #include "base64.h"
 
+#include "wmmintrin.h";
+#include <stdint.h>;
+
 using namespace std;
 
 Aes::Aes(int key_size) :nb(4), block_size(16)
@@ -39,6 +42,62 @@ Aes::Aes(unsigned char *key, int key_size) : nb(4), block_size(16)
 	}
 }
 
+__m128i keyexpand(__m128i k, __m128i kg)
+{
+	k = _mm_xor_si128(k, _mm_slli_si128(k, 4));
+	k = _mm_xor_si128(k, _mm_slli_si128(k, 4));
+	k = _mm_xor_si128(k, _mm_slli_si128(k, 4));
+	kg = _mm_shuffle_epi32(kg, _MM_SHUFFLE(3, 3, 3, 3));
+	return _mm_xor_si128(k, kg);
+}
+
+void Aes::EncryptBlockAesNi(unsigned char * ptxt, unsigned char * out)
+{
+	__declspec(align(16)) unsigned char keya[16];
+	for (int i = 0; i < 16; ++i)
+	{
+		keya[i] = key[i];
+	}
+	__m128i k0 = _mm_load_si128((__m128i *)keya);
+	__m128i k1 = keyexpand(k0, _mm_aeskeygenassist_si128(k0, 0x01));
+	__m128i k2 = keyexpand(k1, _mm_aeskeygenassist_si128(k1, 0x02));
+	__m128i k3 = keyexpand(k2, _mm_aeskeygenassist_si128(k2, 0x04));
+	__m128i k4 = keyexpand(k3, _mm_aeskeygenassist_si128(k3, 0x08));
+	__m128i k5 = keyexpand(k4, _mm_aeskeygenassist_si128(k4, 0x10));
+	__m128i k6 = keyexpand(k5, _mm_aeskeygenassist_si128(k5, 0x20));
+	__m128i k7 = keyexpand(k6, _mm_aeskeygenassist_si128(k6, 0x40));
+	__m128i k8 = keyexpand(k7, _mm_aeskeygenassist_si128(k7, 0x80));
+	__m128i k9 = keyexpand(k8, _mm_aeskeygenassist_si128(k8, 0x1b));
+	__m128i k10 = keyexpand(k9, _mm_aeskeygenassist_si128(k9, 0x36));
+
+	__declspec(align(16)) unsigned char ptxta[16];
+	for (int i = 0; i < 16; ++i)
+	{
+		ptxta[i] = ptxt[i];
+	}
+
+	__m128i state = _mm_load_si128((__m128i *)ptxta);
+	state = _mm_xor_si128(state, k0);
+	state = _mm_aesenc_si128(state, k1);
+	state = _mm_aesenc_si128(state, k2);
+	state = _mm_aesenc_si128(state, k3);
+	state = _mm_aesenc_si128(state, k4);
+	state = _mm_aesenc_si128(state, k5);
+	state = _mm_aesenc_si128(state, k6);
+	state = _mm_aesenc_si128(state, k7);
+	state = _mm_aesenc_si128(state, k8);
+	state = _mm_aesenc_si128(state, k9);
+	state = _mm_aesenclast_si128(state, k10);
+
+	__declspec(align(16)) unsigned char outa[16] = { 0x00 };
+	_mm_store_si128((__m128i *)outa, state);
+
+	for (int i = 0; i < 16; ++i)
+	{
+		out[i] = outa[i];
+	}
+}
+
 void Aes::EncryptBlock(unsigned char * ptxt, unsigned char * out)
 {
 	ExpandKey();
@@ -48,10 +107,10 @@ void Aes::EncryptBlock(unsigned char * ptxt, unsigned char * out)
 
 	for (int r = 1; r < nr; ++r)
 	{
-		SubBytes();
-		ShiftRows();
-		MixColumns();
-		AddRoundKey(r);
+	SubBytes();
+	ShiftRows();
+	MixColumns();
+	AddRoundKey(r);
 	}
 
 	SubBytes();
@@ -86,7 +145,7 @@ void Aes::DecryptBlock(unsigned char * ctxt, unsigned char * out)
 bool Aes::EncryptFileCbc2(string fin, string fout, string key)
 {
 	LoadKey(key, this->key_size, this->key);
-	return EncryptFileCbc(fin, fout);
+	return EncryptFileCbc(fin, fout, this->key);
 }
 
 bool Aes::DecryptFileCbc2(string fin, string fout, string key)
@@ -96,32 +155,84 @@ bool Aes::DecryptFileCbc2(string fin, string fout, string key)
 }
 
 
-bool Aes::EncryptFileCbc(string fin, string fout)
+bool Aes::EncryptFileCbc(string fin, string fout, unsigned char *iv)
 {
 	ifstream ifsin(fin, ios::in | ios::binary | ios::ate);
 	ofstream ifsout(fout, ios::out | ios::binary);
 	ifstream::pos_type size;
 	unsigned char *buffer;
 	unsigned char *tmp;
+	unsigned char *tmp2;
 	if (ifsin.is_open() && ifsout.is_open())
 	{
 		size = ifsin.tellg();
-		buffer = new unsigned char[16];
+		buffer = new unsigned char[64];
 		tmp = new unsigned char[16];
-		GenerateIv(tmp);
+		tmp2 = new unsigned char[16];
+		for (int i = 0; i < 16; ++i)
+		{
+			tmp[i] = iv[i];
+		}
 		ifsout.write((const char*)tmp, 16);
 
 		ifsin.seekg(0, ios::beg);
-		while (ifsin.tellg() + static_cast<ifstream::pos_type>(16) <= size)
+		int rcnt = 0;
+		while (rcnt + static_cast<ifstream::pos_type>(64) <= size)
 		{
-			ifsin.read((char*)buffer, 16);
-			XorArray(buffer, tmp, 16);
-			EncryptBlock(buffer, buffer);
-			ifsout.write((const char*)buffer, 16);
-			CopyArray(buffer, tmp, 16);
+			ifsin.read((char*)buffer, 64);
+			rcnt += 64;
+
+			for (int i = 0; i < 16; ++i)
+			{
+				tmp2[i] = buffer[i];
+			}
+			XorArray(tmp2, tmp, 16);
+			EncryptBlock(tmp2, tmp2);
+			ifsout.write((const char*)tmp2, 16);
+			CopyArray(tmp2, tmp, 16);
+
+			for (int i = 0; i < 16; ++i)
+			{
+				tmp2[i] = buffer[i+16];
+			}
+			XorArray(tmp2, tmp, 16);
+			EncryptBlock(tmp2, tmp2);
+			ifsout.write((const char*)tmp2, 16);
+			CopyArray(tmp2, tmp, 16);
+
+			for (int i = 0; i < 16; ++i)
+			{
+				tmp2[i] = buffer[i + 32];
+			}
+			XorArray(tmp2, tmp, 16);
+			EncryptBlock(tmp2, tmp2);
+			ifsout.write((const char*)tmp2, 16);
+			CopyArray(tmp2, tmp, 16);
+
+			for (int i = 0; i < 16; ++i)
+			{
+				tmp2[i] = buffer[i + 48];
+			}
+			XorArray(tmp2, tmp, 16);
+			EncryptBlock(tmp2, tmp2);
+			ifsout.write((const char*)tmp2, 16);
+			CopyArray(tmp2, tmp, 16);
 		}
 
+
+
 		unsigned char left = size - ifsin.tellg();
+		for (int i = 0; i < (left / 16); ++i)
+		{
+			ifsin.read((char*)tmp2, 16);
+			XorArray(tmp2, tmp, 16);
+			EncryptBlock(tmp2, tmp2);
+			ifsout.write((const char*)tmp2, 16);
+			CopyArray(tmp2, tmp, 16);
+		}
+
+		left = size - ifsin.tellg();
+		
 		if (left != 0)
 		{
 			ifsin.read((char*)buffer, left);
@@ -147,6 +258,7 @@ bool Aes::EncryptFileCbc(string fin, string fout)
 
 		delete[] buffer;
 		delete[] tmp;
+		delete[] tmp2;
 		return true;
 	}
 	else
@@ -256,7 +368,7 @@ void Aes::LoadKey(string in, int size, unsigned char *out)
 	}
 }
 
-void Aes::GenerateIv( unsigned char * out)
+void Aes::GenerateIv(unsigned char * out)
 {
 	BCryptGenRandom(0, out, 16, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
 }
@@ -397,13 +509,13 @@ void Aes::AddRoundKey(int round)
 	/*
 	for (int i = 0; i < 4; ++i)
 	{
-		for (int j = 0; j < 4; ++j)
-		{
-			state[j][i] ^= key_schedule[i * 4 + j + round * block_size];
-		}
+	for (int j = 0; j < 4; ++j)
+	{
+	state[j][i] ^= key_schedule[i * 4 + j + round * block_size];
+	}
 	}
 	*/
-	
+
 	//unroll
 	int add = round * block_size;
 
@@ -514,7 +626,7 @@ void Aes::MixColumns()
 }
 
 void Aes::InvMixColumns()
-{	
+{
 	MixColumnsGeneric(AesStatics::mix_mat_inv);
 }
 
@@ -577,7 +689,7 @@ void Aes::MixColumnsGeneric(const int * mat)
 		sum ^= Gmul(4 * 3 + 2, &state[2][i], mat);
 		sum ^= Gmul(4 * 3 + 3, &state[3][i], mat);
 		state_clm[3] = sum;
-		
+
 		state[0][i] = state_clm[0];
 		state[1][i] = state_clm[1];
 		state[2][i] = state_clm[2];

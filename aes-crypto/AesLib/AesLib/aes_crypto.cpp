@@ -10,7 +10,60 @@
 
 #include "base64.h"
 
+#include <Windows.h>
+#include <bcrypt.h>
+
 using namespace std;
+
+void Create1KB(string out)
+{
+	unsigned char bytes[1024];
+	BCryptGenRandom(0, bytes, 1024, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+
+	ofstream ifsout(out, ios::out | ios::binary);
+	if (ifsout.is_open())
+	{
+		ifsout.write((const char*)bytes, 1024);
+	}
+}
+
+void Create1MB(string out)
+{
+	unsigned char bytes[1024];
+	BCryptGenRandom(0, bytes, 1024, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+
+	ofstream ifsout(out, ios::out | ios::binary);
+	if (ifsout.is_open())
+	{
+		for (int i = 0; i < 1024; ++i)
+		{
+			ifsout.write((const char*)bytes, 1024);
+		}
+	}
+}
+
+void Create10MB(string out)
+{
+	unsigned char bytes[1024];
+	BCryptGenRandom(0, bytes, 1024, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+
+	ofstream ifsout(out, ios::out | ios::binary);
+	if (ifsout.is_open())
+	{
+		for (int i = 0; i < 10 * 1024; ++i)
+		{
+			ifsout.write((const char*)bytes, 1024);
+		}
+	}
+}
+
+
+void CreateFiles()
+{
+	Create1KB("D:/1kb");
+	Create1MB("D:/1mb");
+	Create10MB("D:/10mb");
+}
 
 void SanityCheck()
 {
@@ -27,6 +80,7 @@ void SanityCheck()
 
 void Measure()
 {
+	/*
 	unsigned char key[16];
 	Aes::GenerateKey(16, key);
 	Aes128 aes(key);
@@ -57,11 +111,13 @@ void Measure()
 	cout << "10MB: " << elapsed.count() << " " << (1 / elapsed.count()) * 10 << " MB/s" << endl;
 
 	cin.get();
+	*/
 }
 
 int main()
 {
+	//CreateFiles();
 	SanityCheck();
-	Measure();
+	//Measure();
 	cin.get();
 }

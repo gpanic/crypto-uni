@@ -7,12 +7,13 @@ class Aes
 {
 public:
 	void EncryptBlock(unsigned char * ptxt, unsigned char * out);
+	void EncryptBlockAesNi(unsigned char * ptxt, unsigned char * out);
 	void DecryptBlock(unsigned char * ctxt, unsigned char * out);
 	static void GenerateKey(unsigned int size, unsigned char *out);
 	static bool CreateKey(string out, int size);
 	static void LoadKey(string in, int size, unsigned char *out);
 	static void GenerateIv(unsigned char * out);
-	bool EncryptFileCbc(string fin, string fout);
+	bool EncryptFileCbc(string fin, string fout, unsigned char *iv);
 	bool EncryptFileCbc2(string fin, string fout, string key);
 	bool DecryptFileCbc(string fin, string fout);
 	bool DecryptFileCbc2(string fin, string fout, string key);
