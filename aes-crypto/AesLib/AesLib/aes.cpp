@@ -89,6 +89,7 @@ void Aes::EncryptBlockAesNi(unsigned char * ptxt, unsigned char * out)
 	state = _mm_aesenc_si128(state, k9);
 	state = _mm_aesenclast_si128(state, k10);
 
+
 	__declspec(align(16)) unsigned char outa[16] = { 0x00 };
 	_mm_store_si128((__m128i *)outa, state);
 
@@ -187,7 +188,7 @@ bool Aes::EncryptFileCbc(string fin, string fout, unsigned char *iv)
 				tmp2[i] = buffer[i];
 			}
 			XorArray(tmp2, tmp, 16);
-			EncryptBlock(tmp2, tmp2);
+			EncryptBlockAesNi(tmp2, tmp2);
 			ifsout.write((const char*)tmp2, 16);
 			CopyArray(tmp2, tmp, 16);
 
@@ -196,7 +197,7 @@ bool Aes::EncryptFileCbc(string fin, string fout, unsigned char *iv)
 				tmp2[i] = buffer[i+16];
 			}
 			XorArray(tmp2, tmp, 16);
-			EncryptBlock(tmp2, tmp2);
+			EncryptBlockAesNi(tmp2, tmp2);
 			ifsout.write((const char*)tmp2, 16);
 			CopyArray(tmp2, tmp, 16);
 
@@ -205,7 +206,7 @@ bool Aes::EncryptFileCbc(string fin, string fout, unsigned char *iv)
 				tmp2[i] = buffer[i + 32];
 			}
 			XorArray(tmp2, tmp, 16);
-			EncryptBlock(tmp2, tmp2);
+			EncryptBlockAesNi(tmp2, tmp2);
 			ifsout.write((const char*)tmp2, 16);
 			CopyArray(tmp2, tmp, 16);
 
@@ -214,7 +215,7 @@ bool Aes::EncryptFileCbc(string fin, string fout, unsigned char *iv)
 				tmp2[i] = buffer[i + 48];
 			}
 			XorArray(tmp2, tmp, 16);
-			EncryptBlock(tmp2, tmp2);
+			EncryptBlockAesNi(tmp2, tmp2);
 			ifsout.write((const char*)tmp2, 16);
 			CopyArray(tmp2, tmp, 16);
 		}
@@ -226,7 +227,7 @@ bool Aes::EncryptFileCbc(string fin, string fout, unsigned char *iv)
 		{
 			ifsin.read((char*)tmp2, 16);
 			XorArray(tmp2, tmp, 16);
-			EncryptBlock(tmp2, tmp2);
+			EncryptBlockAesNi(tmp2, tmp2);
 			ifsout.write((const char*)tmp2, 16);
 			CopyArray(tmp2, tmp, 16);
 		}
