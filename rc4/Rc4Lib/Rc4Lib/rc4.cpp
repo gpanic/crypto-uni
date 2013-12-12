@@ -1,7 +1,12 @@
-#include "rc4.h"
 #include <iostream>
 #include <fstream>
 #include <tuple>
+
+#include <Windows.h>
+#include <bcrypt.h>
+
+#include "base64.h"
+#include "rc4.h"
 
 using namespace std;
 
@@ -115,4 +120,46 @@ void Rc4::encrypt_file(string in, string out, unsigned char key[], int key_len)
 		ifsin.close();
 		ifsout.close();
 	}
+}
+
+void Rc4::encrypt_file2(string in, string out, string key_path)
+{
+	unsigned char key[16];
+	load_key(key_path, key);
+	encrypt_file(in, out, key, 16);
+}
+
+void Rc4::generate_key(unsigned int size, unsigned char *out)
+{
+	BCryptGenRandom(0, out, size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+}
+
+void Rc4::create_key(string out)
+{
+	unsigned char key[16];
+	generate_key(16, key);
+	ofstream ifsout(out, ios::out | ios::binary);
+	if (ifsout.is_open())
+	{
+		ifsout << "Rc4 Key:\n";
+		ifsout << base64_encode(key, 16);
+	}
+	ifsout.close();
+}
+
+void Rc4::load_key(string in, unsigned char *out)
+{
+	ifstream ifsin(in, ios::in);
+	if (ifsin.is_open())
+	{
+		string key;
+		getline(ifsin, key);
+		getline(ifsin, key);
+		key = base64_decode(key);
+		for (int i = 0; i < 16; ++i)
+		{
+			out[i] = (unsigned char)key[i];
+		}
+	}
+	ifsin.close();
 }

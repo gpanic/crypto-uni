@@ -9,6 +9,7 @@
 #include "files.h"
 
 #include "rc4.h"
+#include "print_utils.h"
 
 
 using namespace std;

@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rc4Lib", "Rc4Lib\Rc4Lib.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Metrics", "Metrics\Metrics.vcxproj", "{2A34C4E5-8FAC-4556-984B-C84C401195A6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Gui", "Gui\Gui.vcxproj", "{3598A96F-ECE8-467F-B673-6F9092B21955}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -21,11 +23,12 @@ Global
 		{2A34C4E5-8FAC-4556-984B-C84C401195A6}.Debug|Win32.Build.0 = Debug|Win32
 		{2A34C4E5-8FAC-4556-984B-C84C401195A6}.Release|Win32.ActiveCfg = Release|Win32
 		{2A34C4E5-8FAC-4556-984B-C84C401195A6}.Release|Win32.Build.0 = Release|Win32
+		{3598A96F-ECE8-467F-B673-6F9092B21955}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3598A96F-ECE8-467F-B673-6F9092B21955}.Debug|Win32.Build.0 = Debug|Win32
+		{3598A96F-ECE8-467F-B673-6F9092B21955}.Release|Win32.ActiveCfg = Release|Win32
+		{3598A96F-ECE8-467F-B673-6F9092B21955}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal
