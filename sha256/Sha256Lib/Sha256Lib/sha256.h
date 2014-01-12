@@ -1,4 +1,10 @@
+#ifndef SHA_256
+#define SHA_256
+
 #include <cstdint>
+#include <string>
+
+using namespace std;
 
 namespace Sha256
 {
@@ -12,9 +18,11 @@ namespace Sha256
 		0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
 		0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 	};
-	void hash(unsigned char *msg, int mlen, unsigned char *digest);
+	string hash(string filename);
 	inline unsigned long rrot32(unsigned long w, int a);
 	inline unsigned long lrot32(unsigned long w, int a);
 	void appendlen64(unsigned char *buff, int64_t len);
 	void padzero(unsigned char *buff, int start, int end);
 };
+
+#endif

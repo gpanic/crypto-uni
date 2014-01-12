@@ -2,9 +2,14 @@
 #include <bitset>
 #include <iomanip>
 #include <cstdint>
+#include <vector>
+#include <fstream>
+#include <sstream>
 
 #include "sha256.h"
 #include "print_utils.h"
+
+using namespace std;
 
 #define CCATBYTES(b0,b1,b2,b3) (b0 << 24 | b1 << 16 | b2 << 8 | b3);
 
@@ -37,7 +42,7 @@ void Sha256::padzero(unsigned char *buff, int start, int end)
 	}
 }
 
-void Sha256::hash(unsigned char *msg, int mlen, unsigned char *digest)
+string Sha256::hash(string filename)
 {
 	unsigned long w[64];
 	unsigned long s0, s1;
@@ -54,119 +59,137 @@ void Sha256::hash(unsigned char *msg, int mlen, unsigned char *digest)
 	unsigned long h6 = 0x1f83d9ab;
 	unsigned long h7 = 0x5be0cd19;
 
-	int64_t lenbits = mlen * 8;
-	int ppmlen = ((mlen + 8) / 64) * 64 + 64;
-	int padlen = ppmlen - mlen;
-	int left;
 
-	for (int p = 0; p < ppmlen; p += 64)
+	int mlen;
+	unsigned char msg[64];
+	ifstream file(filename, ios::in | ios::binary | ios::ate);
+	if (file.is_open())
 	{
-		// if the next processed chunk has to be padded
-		if (p + 64 <= ppmlen - padlen)
+		mlen = file.tellg();
+		file.seekg(0, ios::beg);
+
+		int64_t lenbits = mlen * 8;
+		int ppmlen = ((mlen + 8) / 64) * 64 + 64;
+		int padlen = ppmlen - mlen;
+		int left;
+
+		for (int p = 0; p < ppmlen; p += 64)
 		{
-			// copy chunk
-			for (int i = 0; i < 16; ++i)
+			// if the next processed chunk has to be padded
+			if (p + 64 <= ppmlen - padlen)
 			{
-				w[i] = CCATBYTES(msg[p + i * 4], msg[p + i * 4 + 1], msg[p + i * 4 + 2], msg[p + i * 4 + 3]);
-			}
-		}
-		else
-		{
-			left = mlen - p;
-			if (left > 0)
-			{
-				// pad message with 10000000 0 and length if space
-				for (int i = 0; i < left; ++i)
+				file.read((char*)msg, 64);
+
+				// copy chunk
+				for (int i = 0; i < 16; ++i)
 				{
-					buff[i] = msg[p + i];
+					w[i] = CCATBYTES(msg[i * 4], msg[i * 4 + 1], msg[i * 4 + 2], msg[i * 4 + 3]);
 				}
-				if (64 - left >= 9)
+			}
+			else
+			{
+				left = mlen - p;
+				file.read((char*)msg, left);
+
+				if (left > 0)
 				{
-					buff[left] = 0x80;
-					padzero(buff, left + 1, 56);
+					// pad message with 10000000 0 and length if space
+					for (int i = 0; i < left; ++i)
+					{
+						buff[i] = msg[i];
+					}
+					if (64 - left >= 9)
+					{
+						buff[left] = 0x80;
+						padzero(buff, left + 1, 56);
+						appendlen64(buff, lenbits);
+					}
+					else
+					{
+						buff[left] = 0x80;
+						padzero(buff, left + 1, 64);
+					}
+				}
+				else if (left < 0)
+				{
+					// padd 0 end with length
+					padzero(buff, 0, 56);
 					appendlen64(buff, lenbits);
 				}
 				else
 				{
-					buff[left] = 0x80;
-					padzero(buff, left + 1, 64);
+					// pad 10000000 end with length
+					buff[0] = 0x80;
+					padzero(buff, 1, 56);
+					appendlen64(buff, lenbits);
+				}
+
+				// copy padded chunk
+				for (int i = 0; i < 16; ++i)
+				{
+					w[i] = CCATBYTES(buff[i * 4], buff[i * 4 + 1], buff[i * 4 + 2], buff[i * 4 + 3]);
 				}
 			}
-			else if (left < 0)
+
+			for (int i = 16; i < 64; ++i)
 			{
-				// padd 0 end with length
-				padzero(buff, 0, 56);
-				appendlen64(buff, lenbits);
-			}
-			else
-			{
-				// pad 10000000 end with length
-				buff[0] = 0x80;
-				padzero(buff, 1, 56);
-				appendlen64(buff, lenbits);
+				s0 = (rrot32(w[i - 15], 7) ^ rrot32(w[i - 15], 18) ^ (w[i - 15] >> 3));
+				s1 = (rrot32(w[i - 2], 17) ^ rrot32(w[i - 2], 19) ^ (w[i - 2] >> 10));
+				w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 			}
 
-			// copy padded chunk
-			for (int i = 0; i < 16; ++i)
+			a = h0;
+			b = h1;
+			c = h2;
+			d = h3;
+			e = h4;
+			f = h5;
+			g = h6;
+			h = h7;
+
+			for (int i = 0; i < 64; ++i)
 			{
-				w[i] = CCATBYTES(buff[i * 4], buff[i * 4 + 1], buff[i * 4 + 2], buff[i * 4 + 3]);
+				S1 = rrot32(e, 6) ^ rrot32(e, 11) ^ rrot32(e, 25);
+				ch = (e & f) ^ ((~e) & g);
+				temp1 = h + S1 + ch + k[i] + w[i];
+				S0 = rrot32(a, 2) ^ rrot32(a, 13) ^ rrot32(a, 22);
+				maj = (a & b) ^ (a & c) ^ (b & c);
+				temp2 = S0 + maj;
+
+				h = g;
+				g = f;
+				f = e;
+				e = d + temp1;
+				d = c;
+				c = b;
+				b = a;
+				a = temp1 + temp2;
+			}
+
+			h0 += a;
+			h1 += b;
+			h2 += c;
+			h3 += d;
+			h4 += e;
+			h5 += f;
+			h6 += g;
+			h7 += h;
+		}
+
+		unsigned char *tp;
+		unsigned long hash[8] = { h0, h1, h2, h3, h4, h5, h6, h7 };
+		unsigned char digest[32];
+		stringstream ss;
+
+
+		for (int i = 0; i < 8; ++i)
+		{
+			tp = (unsigned char *)&hash[i];
+			for (int j = 3; j >= 0; --j)
+			{
+				ss << hex << setw(2) << setfill('0') << (int)tp[j];
 			}
 		}
-
-		for (int i = 16; i < 64; ++i)
-		{
-			s0 = (rrot32(w[i - 15], 7) ^ rrot32(w[i - 15], 18) ^ (w[i - 15] >> 3));
-			s1 = (rrot32(w[i - 2], 17) ^ rrot32(w[i - 2], 19) ^ (w[i - 2] >> 10));
-			w[i] = w[i - 16] + s0 + w[i - 7] + s1;
-		}
-
-		a = h0;
-		b = h1;
-		c = h2;
-		d = h3;
-		e = h4;
-		f = h5;
-		g = h6;
-		h = h7;
-
-		for (int i = 0; i < 64; ++i)
-		{
-			S1 = rrot32(e, 6) ^ rrot32(e, 11) ^ rrot32(e, 25);
-			ch = (e & f) ^ ((~e) & g);
-			temp1 = h + S1 + ch + k[i] + w[i];
-			S0 = rrot32(a, 2) ^ rrot32(a, 13) ^ rrot32(a, 22);
-			maj = (a & b) ^ (a & c) ^ (b & c);
-			temp2 = S0 + maj;
-
-			h = g;
-			g = f;
-			f = e;
-			e = d + temp1;
-			d = c;
-			c = b;
-			b = a;
-			a = temp1 + temp2;
-		}
-
-		h0 += a;
-		h1 += b;
-		h2 += c;
-		h3 += d;
-		h4 += e;
-		h5 += f;
-		h6 += g;
-		h7 += h;
-	}
-
-	unsigned char *tp;
-	unsigned long hash[8] = { h0, h1, h2, h3, h4, h5, h6, h7 };
-
-	for (int i = 0; i < 8; ++i)
-	{
-		tp = (unsigned char *)&hash[i];
-		for (int j = 3; j >= 0; --j)
-		{
-			digest[(i * 4) + (3 - j)] = tp[j];
-		}
+		return ss.str();
 	}
 }

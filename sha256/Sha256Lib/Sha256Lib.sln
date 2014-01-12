@@ -5,6 +5,8 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sha256Lib", "Sha256Lib\Sha256Lib.vcxproj", "{10AC6798-6481-4106-8E8C-129DF3F663F7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sha256Gui", "Sha256Gui\Sha256Gui.vcxproj", "{8EA4419F-65D8-4AE0-BC35-E40AE6A0F5C4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -15,6 +17,10 @@ Global
 		{10AC6798-6481-4106-8E8C-129DF3F663F7}.Debug|Win32.Build.0 = Debug|Win32
 		{10AC6798-6481-4106-8E8C-129DF3F663F7}.Release|Win32.ActiveCfg = Release|Win32
 		{10AC6798-6481-4106-8E8C-129DF3F663F7}.Release|Win32.Build.0 = Release|Win32
+		{8EA4419F-65D8-4AE0-BC35-E40AE6A0F5C4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8EA4419F-65D8-4AE0-BC35-E40AE6A0F5C4}.Debug|Win32.Build.0 = Debug|Win32
+		{8EA4419F-65D8-4AE0-BC35-E40AE6A0F5C4}.Release|Win32.ActiveCfg = Release|Win32
+		{8EA4419F-65D8-4AE0-BC35-E40AE6A0F5C4}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
